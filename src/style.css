@@ -25,3 +25,5 @@
 [data-edit-gesture][data-holding=true]{outline:2px solid #92A8D1;outline-offset:2px;filter:brightness(.95)}
 
 .day-cell{touch-action:manipulation}.week-day[aria-pressed=true]{background:#e6eefb;box-shadow:inset 0 -2px #779ac9}.mini-month .mini-selected{outline:2px solid #779ac9;outline-offset:-2px}.mini-month h3>button{text-align:left;font:inherit}.mini-month>div>button:focus-visible{outline:2px solid #111}
+
+.week-day,.mini-month>div>button{touch-action:manipulation}
