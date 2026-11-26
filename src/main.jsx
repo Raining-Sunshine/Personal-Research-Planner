@@ -1,8 +1,9 @@
 import React,{useState,useEffect,useRef,useMemo} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Flag,Plus,ChevronDown,ChevronLeft,ChevronRight,Search,Settings2,CalendarDays,ChartNoAxesGantt,ListTodo,Check,X,MoreHorizontal,Clock,Link as LinkIcon,ArrowUpRight,Download,Upload,Cloud as CloudCheck,CloudOff,PanelLeft,Layers,Sun,Trash2,Globe,Calendar,CheckCheck,Maximize2,LockKeyhole,LogOut,UserRound,ShieldCheck} from 'lucide-react';
-import {palette,dayKey,parseDay,addDays,daysBetween,uid,overlaps,nextMilestone,seed,validateState} from './model.js';
+import {dayKey,parseDay,addDays,daysBetween,uid,overlaps,nextMilestone,seed,validateState} from './model.js';
 import {words} from './i18n.js';
+import {palette,paletteFamilies,defaultColors} from './palette.js';
 import './style.css';
 
 function App(){
@@ -23,6 +24,8 @@ function App(){
  const flagColor=i=>projectOf(i.projectId)?.flagColor||itemColor(i);
  const message=s=>{setToast(s);setTimeout(()=>setToast(''),3500)};
  async function load(initial=false){
+  // Ignore old network replies after a newer read or local edit.
+  // A delayed GET must never reset the revision used by the save queue.
   const requestNumber=++loadSequence.current,editsAtStart=editSequence.current;
   try{
    if(initial){setStatus('loading');setProblem('')}
@@ -32,6 +35,8 @@ function App(){
    if(!r.ok)throw Error('load');const body=await r.json();
    if(requestNumber!==loadSequence.current||editsAtStart!==editSequence.current||dirty.current||pending.current>0)return;
    if(body.mode==='preview'){
+    // Only the Vite development API opts into local storage; cloud failures
+    // must stay visible instead of silently falling back to a local copy.
     modeRef.current='preview';setMode('preview');
     let saved;try{saved=JSON.parse(localStorage.getItem('daymark-preview'))}catch{}
     const next=saved&&validateState(saved)?saved:seed();
@@ -55,6 +60,9 @@ function App(){
   if(conflictRef.current){dirty.current=true;setStatus('error');setProblem('conflict');return}
   dirty.current=true;setStatus('saving');pending.current++;
   const accountId=accountRef.current?.id;
+  // Serialize snapshots so each successful write supplies the next revision.
+  // Stop after a conflict; automatically retrying an old snapshot could erase
+  // another device's newer changes.
   queue.current=queue.current.then(async()=>{
    if(conflictRef.current)throw Error('conflict');
    const r=await fetch('/api/state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:next,revision:revision.current,accountId})});
@@ -65,7 +73,7 @@ function App(){
  function change(fn){if(!ready)return;save(fn(dataRef.current))}
  function toggle(i){change(d=>({...d,items:d.items.map(x=>x.id===i.id?{...x,done:!x.done}:x)}))}
  function newItem(projectId=null,type=projectId?'task':'event',date=today){setModal({kind:'item',fresh:true,value:{id:uid(),projectId,type,title:'',start:date,end:date,time:'',note:'',color:projectOf(projectId)?.color||'',done:false}})}
- function newProject(){setModal({kind:'project',fresh:true,value:{id:uid(),title:'',subtitle:'',start:today,end:addDays(today,30),color:palette[0],flagColor:palette[0]}})}
+ function newProject(){setModal({kind:'project',fresh:true,value:{id:uid(),title:'',subtitle:'',start:today,end:addDays(today,30),color:defaultColors.research,flagColor:defaultColors.research}})}
  function editItem(i){setModal({kind:'item',fresh:false,value:{...i}})}
  const shown=data.items.filter(i=>(showDone||!i.done)&&(filter==='all'||(filter==='independent'?!i.projectId:i.projectId===filter)));
  const searchMatch=i=>!query||(i.title+' '+i.note+' '+(projectOf(i.projectId)?.title||'')).toLowerCase().includes(query.toLowerCase());
@@ -123,7 +131,7 @@ function App(){
   return <section className="gantt-panel panel"><div className="panel-title-row"><div className="panel-heading"><ChartNoAxesGantt size={20}/><h2>{t.timeline}</h2></div><div className="view-switch"><button className={ganttZoom==='month'?'active':''} onClick={()=>setGanttZoom('month')}>{t.month}</button><button className={ganttZoom==='quarter'?'active':''} onClick={()=>setGanttZoom('quarter')}>{lang==='zh'?'季度':'Quarter'}</button></div></div>
   <div className="calendar-toolbar"><div className="month-navigation"><h3>{fmt(start,{year:'numeric',month:'long'})}{ganttZoom==='quarter'?' – '+fmt(end,{month:'long'}):''}</h3><button className="icon-button" aria-label={t.previous} onClick={()=>{let d=parseDay(start);d.setMonth(d.getMonth()-(ganttZoom==='quarter'?3:1));setCursor(dayKey(d))}}><ChevronLeft size={17}/></button><button className="icon-button" aria-label={t.next} onClick={()=>{let d=parseDay(start);d.setMonth(d.getMonth()+(ganttZoom==='quarter'?3:1));setCursor(dayKey(d))}}><ChevronRight size={17}/></button></div><button className="today-button" onClick={()=>setCursor(today)}>{t.today}</button></div>
   <div className="gantt-scroll"><div className="gantt-table" style={{width:width+184}}><div className="gantt-ruler"><div className="gantt-name ruler-name">{t.project}</div><div className="gantt-dates" style={{width}}>{Array.from({length:num},(_,n)=>{const d=addDays(start,n);return <span key={d} style={{width:unit}} className={d===today?'date-today':''}><small>{n===0||parseDay(d).getDate()===1?fmt(d,{month:'short'}):''}</small>{parseDay(d).getDate()}</span>})}</div></div>
-  {projects.map(p=>{const items=filtered.filter(i=>i.projectId===p.id&&i.type!=='event').sort((a,b)=>a.start.localeCompare(b.start));return <React.Fragment key={p.id}><div className="gantt-row project-gantt-row"><button className="gantt-name" onClick={()=>setModal({kind:'project',fresh:false,value:{...p}})}><span className="project-dot" style={{background:p.color}}/>{p.title}</button><div className="gantt-track" style={{width,backgroundSize:unit+'px 100%'}}>{overlaps(p,start,end)&&<button className="project-duration" style={{...bar(p.start,p.end),background:(p.color||'#ccc')+'45',borderColor:p.color}} onClick={()=>setModal({kind:'project',fresh:false,value:{...p}})} title={p.title+' · '+p.start+' — '+p.end}><span>{t.range}</span></button>}{today>=start&&today<=end&&<i className="today-line" style={{left:x(today)+unit/2}}/>}</div></div>{items.map(i=><div className={'gantt-row '+(i.done?'is-done':'')} key={i.id}><button className="gantt-name task-name" onClick={()=>editItem(i)}>{badge(i)}<span>{i.title}</span></button><div className="gantt-track" style={{width,backgroundSize:unit+'px 100%'}}>{overlaps(i,start,end)&&(i.type==='milestone'?<button className="gantt-milestone" style={{left:x(i.start)+unit/2-10}} onClick={()=>editItem(i)} title={i.title+' · '+i.start}><Flag size={21} fill={flagColor(i)}/><span>{i.title}</span></button>:<button className="gantt-task" style={{...bar(i.start,i.end),background:itemColor(i)+'90'}} onClick={()=>editItem(i)} title={i.title+' · '+i.start+' — '+i.end}>{i.done&&<Check size={12}/>}<span>{i.title}</span></button>)}{today>=start&&today<=end&&<i className="today-line" style={{left:x(today)+unit/2}}/>}</div></div>)}</React.Fragment>})}
+  {projects.map(p=>{const items=filtered.filter(i=>i.projectId===p.id&&i.type!=='event').sort((a,b)=>a.start.localeCompare(b.start));return <React.Fragment key={p.id}><div className="gantt-row project-gantt-row"><button className="gantt-name" onClick={()=>setModal({kind:'project',fresh:false,value:{...p}})}><span className="project-dot" style={{background:p.color}}/>{p.title}</button><div className="gantt-track" style={{width,backgroundSize:unit+'px 100%'}}>{overlaps(p,start,end)&&<button className="project-duration" style={{...bar(p.start,p.end),background:(p.color||'#ccc')+'45',borderColor:p.color}} onClick={()=>setModal({kind:'project',fresh:false,value:{...p}})} title={p.title+' · '+p.start+' — '+p.end}><span>{t.range}</span></button>}{today>=start&&today<=end&&<i className="today-line" style={{left:x(today)+unit/2}}/>}</div></div>{items.map(i=><div className={'gantt-row '+(i.done?'is-done':'')} key={i.id}><button className="gantt-name task-name" onClick={()=>editItem(i)}>{badge(i)}<span>{i.title}</span></button><div className="gantt-track" style={{width,backgroundSize:unit+'px 100%'}}>{overlaps(i,start,end)&&(i.type==='milestone'?<button className="gantt-milestone" style={{left:x(i.start)+unit/2-10}} onClick={()=>editItem(i)} title={i.title+' · '+i.start}><Flag size={21} fill={flagColor(i)}/><span>{i.title}</span></button>:<button className="gantt-task" style={{...bar(i.start,i.end),background:itemColor(i)+'55'}} onClick={()=>editItem(i)} title={i.title+' · '+i.start+' — '+i.end}>{i.done&&<Check size={12}/>}<span>{i.title}</span></button>)}{today>=start&&today<=end&&<i className="today-line" style={{left:x(today)+unit/2}}/>}</div></div>)}</React.Fragment>})}
   {!projects.length&&<div className="empty-state"><ChartNoAxesGantt size={30}/><h3>{t.unplanned}</h3></div>}</div></div><div className="gantt-footer legend"><span><i className="legend-bar"/>{t.range}</span><span><i className="legend-task"/>{t.task}</span><span><Flag size={12}/>{t.milestone}</span><span><i className="legend-today"/>{t.today}</span></div>
   <div className="timeline-note"><Flag size={19}/><div><strong>{t.upcoming}</strong><p>{nexts[0]?nexts[0].item.title+' · '+fmt(nexts[0].item.start):t.noMilestone}</p></div><span className="orbit-decoration"><span/><span/><span/></span></div>
   </section>
@@ -151,8 +159,11 @@ function Dialog({children,title,close,small=false}){
  useEffect(()=>{const previous=document.activeElement;const el=ref.current;const focusables=()=>[...el.querySelectorAll('button,input,select,textarea,a[href]')].filter(x=>!x.disabled&&x.offsetParent!==null);(focusables().find(x=>x.tagName==='INPUT')||focusables()[0])?.focus();const onKey=e=>{if(e.key==='Escape'){e.stopPropagation();closeRef.current()}if(e.key==='Tab'){const all=focusables(),first=all[0],last=all[all.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}}};el.addEventListener('keydown',onKey);return()=>{el.removeEventListener('keydown',onKey);previous?.focus()}},[]);
  return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section ref={ref} className={'modal '+(small?'small-modal':'')} role="dialog" aria-modal="true" aria-label={title}><div className="modal-header"><h2>{title}</h2><button className="icon-button" onClick={close} aria-label="Close / 关闭"><X size={20}/></button></div>{children}</section></div>
 }
-function ColorPicker({value,onChange,label,t,optional=true}){
- return <fieldset className="color-field"><legend>{label}</legend><div className="color-options">{optional&&<button type="button" className={'color-swatch no-color '+(!value?'selected':'')} aria-label={t.none} title={t.none} onClick={()=>onChange('')}><X size={13}/></button>}{palette.map(c=><button type="button" key={c} className={'color-swatch '+(value?.toUpperCase()===c?'selected':'')} style={{background:c}} aria-label={c} title={c} onClick={()=>onChange(c)}>{value?.toUpperCase()===c&&<Check size={14}/>}</button>)}<label className="custom-hex"><span>#</span><input aria-label={t.custom} maxLength={7} placeholder="HEX" value={value?.replace('#','')||''} onChange={e=>onChange(e.target.value?'#'+e.target.value.replace('#',''):'')}/><input className="native-color" type="color" aria-label={t.custom+' picker'} value={/^#[\da-f]{6}$/i.test(value)?value:'#8CB8F3'} onChange={e=>onChange(e.target.value)}/></label></div></fieldset>
+function ColorPicker({value,onChange,label,t,lang,optional=true}){
+ // Both item colors and project flag colors share this component and palette.
+ // Keep custom values editable even when they are not part of the presets.
+ const selected=value?.toUpperCase()||'';
+ return <fieldset className="color-field"><legend>{label}</legend><div className="color-controls"><span className="current-color" style={{background:/^#[\da-f]{6}$/i.test(value)?value:'transparent'}} aria-hidden="true"/><label className="custom-hex"><span>#</span><input aria-label={t.custom} maxLength={7} placeholder="HEX" value={value?.replace('#','')||''} onChange={e=>onChange(e.target.value?'#'+e.target.value.replace('#',''):'')}/><input className="native-color" type="color" aria-label={t.custom+' picker'} value={/^#[\da-f]{6}$/i.test(value)?value:'#92A8D1'} onChange={e=>onChange(e.target.value)}/></label>{optional&&<button type="button" className={'clear-color '+(!value?'active':'')} onClick={()=>onChange('')}><X size={13}/>{t.none}</button>}</div><details className="preset-library"><summary><span>{t.presets}<small>{palette.length}</small></span><ChevronDown size={15}/></summary><p>{t.paletteOrder}</p><div className="palette-groups">{paletteFamilies.map(group=><div className="palette-family" key={group.id}><span className="palette-family-label">{group[lang]}</span><div className="palette-dots">{group.colors.map(c=><button type="button" key={c} className={'color-swatch '+(selected===c?'selected':'')} style={{background:c}} aria-label={c} aria-pressed={selected===c} title={c} onClick={()=>onChange(c)}>{selected===c&&<span className="swatch-check"><Check size={12}/></span>}</button>)}</div></div>)}</div></details></fieldset>
 }
 function Editor({modal,t,lang,projects,close,saveValue,remove,noteContent}){
  const [v,setV]=useState(modal.value),[error,setError]=useState(''),project=modal.kind==='project';const update=(key,value)=>setV(x=>({...x,[key]:value}));
@@ -164,7 +175,7 @@ function Editor({modal,t,lang,projects,close,saveValue,remove,noteContent}){
  <div className="form-row"><label className="form-field">{!project&&v.type==='milestone'?t.date:t.start}<input type="date" required value={v.start} onChange={e=>setV(x=>({...x,start:e.target.value,end:x.end<e.target.value||x.type==='milestone'?e.target.value:x.end}))}/></label>{(project||v.type!=='milestone')&&<label className="form-field">{t.end}<input type="date" min={v.start} required value={v.end} onChange={e=>update('end',e.target.value)}/></label>}</div>
  {!project&&v.type==='event'&&<label className="form-field">{t.time}<input type="time" value={v.time||''} onChange={e=>update('time',e.target.value)}/></label>}
  {!project&&<><label className="form-field">{t.note}<textarea rows={4} maxLength={20000} placeholder={t.noteHint} value={v.note} onChange={e=>update('note',e.target.value)}/></label>{/https?:\/\//.test(v.note)&&<div className="note-preview editor-note">{noteContent(v.note)}</div>}</>}
- <ColorPicker value={v.color} onChange={c=>update('color',c)} label={t.color} t={t}/>{project&&<ColorPicker value={v.flagColor} onChange={c=>update('flagColor',c)} label={t.flagColor} t={t} optional={false}/>}
+ <ColorPicker value={v.color} onChange={c=>update('color',c)} label={t.color} t={t} lang={lang}/>{project&&<ColorPicker value={v.flagColor} onChange={c=>update('flagColor',c)} label={t.flagColor} t={t} lang={lang} optional={false}/>}
  {!project&&<label className="done-toggle"><input type="checkbox" checked={v.done} onChange={e=>update('done',e.target.checked)}/>{t.completed}</label>}
  {error&&<p className="form-error" role="alert">{error}</p>}</div><div className="modal-actions">{!modal.fresh&&<button type="button" className="delete-button" onClick={remove}><Trash2 size={16}/>{t.delete}</button>}<div className="action-spacer"/><button type="button" className="soft-button" onClick={close}>{t.cancel}</button><button type="submit" className="primary-button"><Check size={16}/>{t.save}</button></div></form></Dialog>
 }
