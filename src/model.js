@@ -1,3 +1,4 @@
+import {recurringOverlap,validRecurrence} from './recurrence.js';
 import {defaultColors} from './palette.js';
 export const dayKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 // Use local noon for date-only values so timezone conversion does not move a
@@ -6,7 +7,7 @@ export const parseDay=s=>new Date(s+'T12:00:00');
 export const addDays=(s,n)=>{let d=parseDay(s);d.setDate(d.getDate()+n);return dayKey(d)};
 export const daysBetween=(a,b)=>Math.round((parseDay(b)-parseDay(a))/86400000);
 export const uid=()=>crypto.randomUUID();
-export const overlaps=(item,start,end)=>item.start<=end&&(item.end||item.start)>=start;
+export const overlaps=recurringOverlap;
 export const nextMilestone=(project,items)=>items.filter(x=>x.projectId===project.id&&x.type==='milestone'&&!x.done).sort((a,b)=>a.start.localeCompare(b.start))[0];
 export function seed(today=dayKey()){
  const d=n=>addDays(today,n);
@@ -38,11 +39,19 @@ export function validateState(data){
  const id=s=>typeof s==='string'&&/^[a-z\d_-]{1,100}$/i.test(s);
  const ids=new Set();
  for(const p of data.projects){if(!record(p)||!id(p.id)||ids.has(p.id)||!title(p.title)||typeof p.subtitle!=='string'||p.subtitle.length>300||!date(p.start)||!date(p.end)||p.end<p.start||!color(p.color)||!color(p.flagColor))return false;ids.add(p.id);}
+ const sourceIds=new Set();
+ if(data.calendars!==undefined){
+  if(!Array.isArray(data.calendars)||data.calendars.length>30)return false;
+  for(const c of data.calendars){
+   if(!record(c)||!id(c.id)||sourceIds.has(c.id)||!title(c.name)||!['file','url','outlook'].includes(c.kind)||!['calendar','project'].includes(c.mode)||!date(c.start)||!date(c.end)||c.end<c.start||daysBetween(c.start,c.end)>366||!color(c.color)||typeof c.url!=='string'||c.url.length>4096||typeof c.calendarId!=='string'||c.calendarId.length>1000||typeof c.syncedAt!=='string'||c.syncedAt.length>40||(c.mode==='project'&&!ids.has(c.projectId)))return false;
+   sourceIds.add(c.id);
+  }
+ }
  const itemIds=new Set();
- for(const i of data.items){if(!record(i)||!id(i.id)||itemIds.has(i.id)||!title(i.title)||!['task','event','milestone'].includes(i.type)||!date(i.start)||!date(i.end)||i.end<i.start||(i.type==='milestone'&&i.start!==i.end)||!color(i.color)||typeof i.done!=='boolean'||typeof i.note!=='string'||i.note.length>20000||(i.projectId!==null&&(!id(i.projectId)||!ids.has(i.projectId)))||(i.projectId===null&&i.type!=='event')||(i.time!==undefined&&(typeof i.time!=='string'||(i.time!==''&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(i.time)))))return false;itemIds.add(i.id);}
+ for(const i of data.items){if(!record(i)||!id(i.id)||itemIds.has(i.id)||!title(i.title)||!['task','event','milestone'].includes(i.type)||!date(i.start)||!date(i.end)||i.end<i.start||(i.type==='milestone'&&i.start!==i.end)||!color(i.color)||typeof i.done!=='boolean'||typeof i.note!=='string'||i.note.length>20000||(i.projectId!==null&&(!id(i.projectId)||!ids.has(i.projectId)))||(i.projectId===null&&i.type!=='event')||(i.time!==undefined&&(typeof i.time!=='string'||(i.time!==''&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(i.time)))))return false;if(!validRecurrence(i.recurrence,i,date)||(i.calendarOnly!==undefined&&typeof i.calendarOnly!=='boolean')||(i.calendarOnly&&(i.type!=='event'||i.projectId!==null))||(i.sourceId!==undefined&&(!sourceIds.has(i.sourceId)||i.type!=='event'))||(i.sourceUid!==undefined&&(typeof i.sourceUid!=='string'||i.sourceUid.length>2000)))return false;itemIds.add(i.id);}
  return true;
 }
 export function normalizeState(data){
  // Persist only known fields; extra properties from an import are not trusted.
- return {demo:data.demo,projects:data.projects.map(p=>({id:p.id,title:p.title,subtitle:p.subtitle,start:p.start,end:p.end,color:p.color,flagColor:p.flagColor})),items:data.items.map(i=>({id:i.id,projectId:i.projectId,type:i.type,title:i.title,start:i.start,end:i.end,time:i.time||'',note:i.note,color:i.color,done:i.done}))};
+ return {demo:data.demo,calendars:(data.calendars||[]).map(c=>({id:c.id,name:c.name,kind:c.kind,mode:c.mode,projectId:c.mode==='project'?c.projectId:null,color:c.color,start:c.start,end:c.end,url:c.url,calendarId:c.calendarId,syncedAt:c.syncedAt})),projects:data.projects.map(p=>({id:p.id,title:p.title,subtitle:p.subtitle,start:p.start,end:p.end,color:p.color,flagColor:p.flagColor})),items:data.items.map(i=>({id:i.id,projectId:i.projectId,type:i.type,title:i.title,start:i.start,end:i.end,time:i.time||'',note:i.note,color:i.color,done:i.done,...(i.recurrence?{recurrence:{frequency:i.recurrence.frequency,interval:i.recurrence.interval,until:i.recurrence.until||'',...(i.recurrence.frequency==='weekly'?{weekdays:i.recurrence.weekdays}:{})}}:{}),...(i.calendarOnly?{calendarOnly:true}:{}),...(i.sourceId?{sourceId:i.sourceId,sourceUid:i.sourceUid||''}:{})}))};
 }

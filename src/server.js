@@ -1,3 +1,4 @@
+import {calendarAPI} from './outlook-server.js';
 import {validateState,normalizeState} from './model.js';
 const MAX_BODY_BYTES=2000000;
 async function readBoundedBody(request){
@@ -11,6 +12,7 @@ export function createHandler(assets){
  const json=(body,status=200,headers={})=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json;charset=utf-8','Cache-Control':'no-store, private','X-Content-Type-Options':'nosniff',...headers}});
  return {async fetch(request,env){
   const url=new URL(request.url);
+  if(url.pathname.startsWith('/api/outlook/')||url.pathname==='/api/calendar/feed')return calendarAPI(request,env);
   if(url.pathname==='/api/state'){
    // Sites supplies and verifies this identity header. A client-supplied ID
    // never chooses which user's record is read or modified.
