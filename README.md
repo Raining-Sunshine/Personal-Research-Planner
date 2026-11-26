@@ -76,8 +76,8 @@
 - 浏览器。
 
 ```bash
-git clone https://github.com/Raining-Sunshine/planner.git
-cd planner
+git clone https://github.com/Raining-Sunshine/Personal-Research-Planner.git
+cd Personal-Research-Planner
 npm ci
 npm run dev
 ```
