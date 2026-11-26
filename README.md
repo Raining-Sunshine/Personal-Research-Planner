@@ -1,4 +1,4 @@
-# Daymark
+# Planner
 
 A private bilingual personal planner hosted on Sites. Desktop uses a persistent project-entry sidebar and a calendar/timeline tab; screens at least 1800 px show both panels. Mobile uses bottom navigation.
 
