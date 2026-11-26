@@ -1,6 +1,6 @@
 import React,{useState,useEffect,useRef,useMemo} from 'react';
 import {createRoot} from 'react-dom/client';
-import {Flag,Plus,ChevronDown,ChevronLeft,ChevronRight,Search,Settings2,CalendarDays,ChartNoAxesGantt,ListTodo,Check,X,MoreHorizontal,Clock,Link as LinkIcon,ArrowUpRight,Download,Upload,Cloud as CloudCheck,CloudOff,PanelLeft,Layers,Sun,Trash2,Globe,Calendar,CheckCheck,Maximize2} from 'lucide-react';
+import {Flag,Plus,ChevronDown,ChevronLeft,ChevronRight,Search,Settings2,CalendarDays,ChartNoAxesGantt,ListTodo,Check,X,MoreHorizontal,Clock,Link as LinkIcon,ArrowUpRight,Download,Upload,Cloud as CloudCheck,CloudOff,PanelLeft,Layers,Sun,Trash2,Globe,Calendar,CheckCheck,Maximize2,LockKeyhole,LogOut,UserRound,ShieldCheck} from 'lucide-react';
 import {palette,dayKey,parseDay,addDays,daysBetween,uid,overlaps,nextMilestone,seed,validateState} from './model.js';
 import {words} from './i18n.js';
 import './style.css';
@@ -10,6 +10,8 @@ function App(){
  const t=words[lang],today=dayKey(),locale=lang==='zh'?'zh-CN':'en-US';
  const [data,setData]=useState(seed()),[ready,setReady]=useState(false),[mode,setMode]=useState('cloud');
  const [status,setStatus]=useState('loading'),[problem,setProblem]=useState(''),[toast,setToast]=useState('');
+ const [account,setAccount]=useState(null);
+ const accountRef=useRef(null),editSequence=useRef(0),loadSequence=useRef(0),conflictRef=useRef(false);
  const revision=useRef(0),dataRef=useRef(data),queue=useRef(Promise.resolve()),dirty=useRef(false),modeRef=useRef('cloud'),pending=useRef(0);
  const [view,setView]=useState('calendar'),[period,setPeriod]=useState('month'),[cursor,setCursor]=useState(today),[selectedDay,setSelectedDay]=useState(today);
  const [filter,setFilter]=useState('all'),[query,setQuery]=useState(''),[showDone,setShowDone]=useState(false),[collapsed,setCollapsed]=useState({});
@@ -21,16 +23,23 @@ function App(){
  const flagColor=i=>projectOf(i.projectId)?.flagColor||itemColor(i);
  const message=s=>{setToast(s);setTimeout(()=>setToast(''),3500)};
  async function load(initial=false){
+  const requestNumber=++loadSequence.current,editsAtStart=editSequence.current;
   try{
    if(initial){setStatus('loading');setProblem('')}
    const r=await fetch('/api/state',{cache:'no-store'});
+   if(requestNumber!==loadSequence.current||editsAtStart!==editSequence.current)return;
+   if(r.status===401){setAccount(null);setReady(false);setProblem('loginRequired');setStatus('error');return}
    if(!r.ok)throw Error('load');const body=await r.json();
+   if(requestNumber!==loadSequence.current||editsAtStart!==editSequence.current||dirty.current||pending.current>0)return;
    if(body.mode==='preview'){
     modeRef.current='preview';setMode('preview');
     let saved;try{saved=JSON.parse(localStorage.getItem('daymark-preview'))}catch{}
     const next=saved&&validateState(saved)?saved:seed();
     dataRef.current=next;setData(next);setStatus('local');
-   }else if(!dirty.current){
+   }else{
+    if(accountRef.current&&accountRef.current.id!==body.account?.id){setAccount(null);setReady(false);setProblem('sessionChanged');setStatus('error');return}
+    if((body.revision||0)<revision.current)return;
+    accountRef.current=body.account;setAccount(body.account);
     revision.current=body.revision||0;const next=body.data||seed();dataRef.current=next;setData(next);setStatus('cloud');
    }
    setReady(true);setProblem('');
@@ -39,13 +48,19 @@ function App(){
  useEffect(()=>{load(true);const timer=setInterval(()=>{if(modeRef.current==='cloud'&&!dirty.current&&pending.current===0)load()},30000);const focus=()=>{if(modeRef.current==='cloud'&&!dirty.current&&pending.current===0)load()};window.addEventListener('focus',focus);const before=e=>{if(dirty.current){e.preventDefault();e.returnValue=''}};window.addEventListener('beforeunload',before);const install=e=>{e.preventDefault();installPrompt.current=e};window.addEventListener('beforeinstallprompt',install);if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});return()=>{clearInterval(timer);window.removeEventListener('focus',focus);window.removeEventListener('beforeunload',before);window.removeEventListener('beforeinstallprompt',install)}},[]);
  useEffect(()=>{localStorage.setItem('daymark-language',lang);document.documentElement.lang=lang==='zh'?'zh-CN':'en'},[lang]);
  function save(next){
+  if(!ready)return;
+  editSequence.current++;
   dataRef.current=next;setData(next);
   if(modeRef.current==='preview'){localStorage.setItem('daymark-preview',JSON.stringify(next));setStatus('local');return}
+  if(conflictRef.current){dirty.current=true;setStatus('error');setProblem('conflict');return}
   dirty.current=true;setStatus('saving');pending.current++;
+  const accountId=accountRef.current?.id;
   queue.current=queue.current.then(async()=>{
-   const r=await fetch('/api/state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:next,revision:revision.current})});
+   if(conflictRef.current)throw Error('conflict');
+   const r=await fetch('/api/state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:next,revision:revision.current,accountId})});
+   if(r.status===401)throw Error('loginRequired');if(r.status===429)throw Error('rateLimit');
    if(r.status===409)throw Error('conflict');if(!r.ok)throw Error('saveError');const b=await r.json();revision.current=b.revision;
-  }).then(()=>{pending.current--;if(!pending.current){dirty.current=false;setStatus('cloud');setProblem('')}}).catch(e=>{pending.current--;setStatus('error');setProblem(e.message==='conflict'?'conflict':'saveError');dirty.current=true});
+  }).then(()=>{pending.current--;if(!pending.current){dirty.current=false;setStatus('cloud');setProblem('')}}).catch(e=>{pending.current--;setStatus('error');const error=['conflict','rateLimit','loginRequired'].includes(e.message)?e.message:'saveError';setProblem(error);if(error==='conflict')conflictRef.current=true;if(error==='loginRequired'){setAccount(null);setReady(false)}dirty.current=true});
  }
  function change(fn){if(!ready)return;save(fn(dataRef.current))}
  function toggle(i){change(d=>({...d,items:d.items.map(x=>x.id===i.id?{...x,done:!x.done}:x)}))}
@@ -113,7 +128,7 @@ function App(){
   <div className="timeline-note"><Flag size={19}/><div><strong>{t.upcoming}</strong><p>{nexts[0]?nexts[0].item.title+' · '+fmt(nexts[0].item.start):t.noMilestone}</p></div><span className="orbit-decoration"><span/><span/><span/></span></div>
   </section>
  }
- return <><header className="app-header"><div className="brand"><div className="brand-mark"><Flag size={22}/></div><span>Planner</span></div><div className="header-actions"><span className={'save-status '+status}>{status==='cloud'?<CloudCheck size={15}/>:status==='error'?<CloudOff size={15}/>:<span className="status-ring"/>}{t[status]}</span><button className="language-button" onClick={()=>setLang(lang==='zh'?'en':'zh')} aria-label={lang==='zh'?'Switch to English':'切换为中文'}><Globe size={15}/>{lang==='zh'?'EN':'中'}</button><button className="icon-button global-settings" onClick={()=>setSettings(true)} aria-label={t.settings}><Settings2 size={18}/></button><button className="primary-button header-new" onClick={newProject} disabled={!ready}><Plus size={17}/>{t.newProject}</button></div></header>
+ return <><header className="app-header"><div className="brand"><div className="brand-mark"><Flag size={22}/></div><span>Planner</span></div><div className="header-actions"><button className="account-button" onClick={()=>setSettings(true)} title={t.account} aria-label={t.account}><LockKeyhole size={14}/><span>{t.onlyMe}</span></button><span className={'save-status '+status}>{status==='cloud'?<CloudCheck size={15}/>:status==='error'?<CloudOff size={15}/>:<span className="status-ring"/>}{t[status]}</span><button className="language-button" onClick={()=>setLang(lang==='zh'?'en':'zh')} aria-label={lang==='zh'?'Switch to English':'切换为中文'}><Globe size={15}/>{lang==='zh'?'EN':'中'}</button><button className="icon-button global-settings" onClick={()=>setSettings(true)} aria-label={t.settings}><Settings2 size={18}/></button><button className="primary-button header-new" onClick={newProject} disabled={!ready}><Plus size={17}/>{t.newProject}</button></div></header>
  {problem&&<div className="error-banner" role="alert"><CloudOff size={17}/><span>{t[problem]}</span>{problem!=='conflict'&&<button onClick={()=>ready?save(dataRef.current):load(true)}>{t.retry}</button>}<button onClick={download}>{t.export}</button></div>}
  <div className={'app-layout view-'+view}>{Sidebar()}<main className="workspace"><div className="workspace-heading"><div><div className="eyebrow">{fmt(today,{year:'numeric',month:'long',day:'numeric',weekday:'long'})}</div><h1>{lang==='zh'?'计划清晰，步履从容。':'Make room for progress.'}</h1><p>{t.focus}</p></div><div className="daily-stat"><span className="sun-icon"><Sun size={22}/></span><div><b>{activeTasks.length}<span>{t.todayTasks}</span></b><small>{data.projects.length} {t.projectCount} · {data.items.filter(i=>i.done).length} {t.doneCount}</small></div></div></div>
  {data.demo&&<div className="demo-banner"><span className="demo-dot"/><span><b>{t.demo}</b><span className="demo-hint"> · {t.demoHint}</span></span><button onClick={()=>setConfirm({text:t.clearQuestion,run:()=>{save({demo:false,projects:[],items:[]});setFilter('all')}})}>{t.clearDemo}<Plus size={14}/></button></div>}
@@ -123,10 +138,11 @@ function App(){
  <footer className="workspace-footer"><span>Planner</span><span>{t.safe}</span><span>{new Date().getFullYear()}</span></footer></main></div>
  <nav className="mobile-nav" aria-label={t.view}>{[['list',ListTodo,'mobileList'],['calendar',CalendarDays,'calendar'],['gantt',ChartNoAxesGantt,'gantt']].map(([id,Icon,key])=><button key={id} className={view===id?'active':''} onClick={()=>nav(id)}><Icon size={21}/><span>{t[key]}</span></button>)}</nav>
  {modal&&<Editor key={modal.value.id} modal={modal} t={t} lang={lang} projects={data.projects} close={()=>setModal(null)} saveValue={value=>{change(d=>modal.kind==='project'?{...d,projects:modal.fresh?[...d.projects,value]:d.projects.map(p=>p.id===value.id?value:p)}:{...d,items:modal.fresh?[...d.items,value]:d.items.map(i=>i.id===value.id?value:i)});setModal(null)}} remove={()=>setConfirm({text:modal.kind==='project'?t.deleteProject+' ('+data.items.filter(i=>i.projectId===modal.value.id).length+' '+t.count+')':t.deleteItem,run:()=>{change(d=>modal.kind==='project'?{...d,projects:d.projects.filter(p=>p.id!==modal.value.id),items:d.items.filter(i=>i.projectId!==modal.value.id)}:{...d,items:d.items.filter(i=>i.id!==modal.value.id)});if(filter===modal.value.id)setFilter('all');setModal(null)}})} noteContent={noteContent}/>}
- {settings&&<Dialog close={()=>setSettings(false)} title={t.info}><div className="settings-body"><div className="settings-summary"><div className="brand-mark"><Flag size={24}/></div><h3>Planner</h3><p>{t.safe}</p></div><div className="settings-section"><h3>{t.language}</h3><div className="language-options"><button className={lang==='zh'?'active':''} onClick={()=>setLang('zh')}>简体中文</button><button className={lang==='en'?'active':''} onClick={()=>setLang('en')}>English</button></div></div><div className="settings-section"><h3>{t.backup}</h3><p>{mode==='preview'?t.previewInfo:t.cloudInfo}</p><div className="backup-actions"><button className="soft-button" onClick={download}><Download size={16}/>{t.export}</button><button className="soft-button" onClick={()=>importRef.current.click()}><Upload size={16}/>{t.restore}</button></div></div><div className="settings-section"><button className="soft-button" onClick={async()=>{if(installPrompt.current){await installPrompt.current.prompt();installPrompt.current=null}else message(t.installTip)}}><Plus size={16}/>{t.install}</button><p>{t.installTip}</p></div></div></Dialog>}
+ {settings&&<Dialog close={()=>setSettings(false)} title={t.info}><div className="settings-body"><div className="settings-summary"><div className="brand-mark"><Flag size={24}/></div><h3>Planner</h3><p>{t.safe}</p></div><div className="settings-section account-section"><h3>{t.account}</h3><div className="account-card"><span className="account-avatar"><UserRound size={22}/></span><div><strong>{account?.name||account?.email||t.previewAccount}</strong>{account?.email&&account.name!==account.email&&<small>{account.email}</small>}<small>{account?t.signedIn:t.local}</small></div><LockKeyhole size={17}/></div><p>{t.accountHelp}</p>{account&&<a className="signout-link" href="/signout-with-chatgpt?return_to=%2F" target="_top" onClick={e=>{if(dirty.current||pending.current){e.preventDefault();message(t.pendingSave)}else{setData({demo:false,projects:[],items:[]});setSettings(false);setReady(false)}}}><LogOut size={15}/>{t.signOut}</a>}<div className="privacy-note"><LockKeyhole size={17}/><div><strong>{t.onlyMe}</strong><p>{t.privacyHelp}</p></div></div><div className="privacy-note"><ShieldCheck size={17}/><div><strong>{t.protection}</strong><p>{t.protectionHelp}</p></div></div></div><div className="settings-section"><h3>{t.language}</h3><div className="language-options"><button className={lang==='zh'?'active':''} onClick={()=>setLang('zh')}>简体中文</button><button className={lang==='en'?'active':''} onClick={()=>setLang('en')}>English</button></div></div><div className="settings-section"><h3>{t.backup}</h3><p>{mode==='preview'?t.previewInfo:t.cloudInfo}</p><div className="backup-actions"><button className="soft-button" onClick={download}><Download size={16}/>{t.export}</button><button className="soft-button" onClick={()=>importRef.current.click()}><Upload size={16}/>{t.restore}</button></div></div><div className="settings-section"><button className="soft-button" onClick={async()=>{if(installPrompt.current){await installPrompt.current.prompt();installPrompt.current=null}else message(t.installTip)}}><Plus size={16}/>{t.install}</button><p>{t.installTip}</p></div></div></Dialog>}
  <input type="file" ref={importRef} accept="application/json,.json" hidden onChange={restore}/>
  {confirm&&<Dialog close={()=>setConfirm(null)} title={lang==='zh'?'确认操作':'Confirm action'} small><p className="confirm-text">{confirm.text}</p><div className="modal-actions"><button className="soft-button" onClick={()=>setConfirm(null)}>{t.cancel}</button><button className="primary-button" onClick={()=>{confirm.run();setConfirm(null)}}>{lang==='zh'?'确认':'Confirm'}</button></div></Dialog>}
  {toast&&<div className="toast" role="status"><Check size={16}/>{toast}</div>}
+ {!ready&&['loginRequired','sessionChanged'].includes(problem)&&<div className="login-overlay"><div className="login-card"><span className="brand-mark"><LockKeyhole size={25}/></span><h2>Planner</h2><p>{t[problem]}</p><a className="primary-button" href="/signin-with-chatgpt?return_to=%2F" target="_top">{t.signIn}</a>{dirty.current&&<button className="soft-button" onClick={download}><Download size={15}/>{t.export}</button>}<small>{t.privacyHelp}</small></div></div>}
  {!ready&&!problem&&<div className="loading-overlay"><div className="brand-mark"><Flag size={27}/></div><span>{t.loading}…</span></div>}
  </>;
 }

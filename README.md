@@ -18,3 +18,11 @@ The build embeds client assets into dist/server/index.js and copies the hosting 
 ## Mobile
 
 Responsive web app with a web manifest and service worker. Supports browser installation / Add to Home Screen. Online access is required for cloud data; the service worker does not cache private records.
+
+## Account and protection
+
+Keep the Sites audience owner-only. Sites owns sign-in and sign-out; the app shows the current account and does not store passwords. Every API operation requires the platform-authenticated user ID. Reads and writes are isolated by that ID; the client account ID is only a session-change check, never an authorization source.
+
+Writes require a matching Origin and JSON content, are limited to 60 requests per account per minute using an atomic D1 counter, and are streamed with a 2 MB byte cap. Invalid record types, dates, colors, IDs, references and unsafe revisions are rejected. Only declared record fields are stored. Revision conflicts stop the client save queue; stale reads cannot replace newer local edits. API responses use no-store and the service worker caches no private records.
+
+Run npm test for account isolation, CSRF, streaming size limits, strict validation, revision conflicts and SQL-backed rate limits. Tests use SQLite with the committed migrations. These controls supplement the private Sites access policy; they do not replace platform authentication.

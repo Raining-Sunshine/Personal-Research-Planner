@@ -1,6 +1,12 @@
-import {validateState} from './model.js';
+import {validateState,normalizeState} from './model.js';
+const MAX_BODY_BYTES=2000000;
+async function readBoundedBody(request){
+ if(!request.body)return '';
+ const reader=request.body.getReader(),decoder=new TextDecoder();let bytes=0,text='';
+ try{while(true){const {done,value}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>MAX_BODY_BYTES){await reader.cancel();throw new RangeError('Too large')}text+=decoder.decode(value,{stream:true})}return text+decoder.decode()}finally{reader.releaseLock()}
+}
 export function createHandler(assets){
- const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json;charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+ const json=(body,status=200,headers={})=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json;charset=utf-8','Cache-Control':'no-store, private','X-Content-Type-Options':'nosniff',...headers}});
  return {async fetch(request,env){
   const url=new URL(request.url);
   if(url.pathname==='/api/state'){
@@ -10,17 +16,25 @@ export function createHandler(assets){
    try{
     if(request.method==='GET'){
      const row=await env.DB.prepare('SELECT document, revision FROM planner_states WHERE user_id = ?').bind(userId).first();
-     return json({data:row?JSON.parse(row.document):null,revision:row?.revision||0});
+     const email=request.headers.get('oai-authenticated-user-email')||'';
+     let name=request.headers.get('oai-authenticated-user-full-name')||'';
+     if(request.headers.get('oai-authenticated-user-full-name-encoding')==='percent-encoded-utf-8'){try{name=decodeURIComponent(name)}catch{name=''}}
+     return json({data:row?JSON.parse(row.document):null,revision:row?.revision||0,account:{id:userId,email,name:name||email},access:'private'});
     }
     if(request.method!=='PUT')return json({error:'Method not allowed'},405);
     const origin=request.headers.get('Origin');
-    if(!origin||origin!==url.origin)return json({error:'Origin mismatch'},403);
+    if(!origin||origin!==url.origin||request.headers.get('Sec-Fetch-Site')==='cross-site')return json({error:'Origin mismatch'},403);
     if(!request.headers.get('Content-Type')?.startsWith('application/json'))return json({error:'Expected JSON'},415);
-    if(Number(request.headers.get('Content-Length')||0)>2000000)return json({error:'Too large'},413);
-    const raw=await request.text();if(raw.length>2000000)return json({error:'Too large'},413);
+    if(Number(request.headers.get('Content-Length')||0)>MAX_BODY_BYTES)return json({error:'Too large'},413);
+    const now=Math.floor(Date.now()/1000),windowStart=Math.floor(now/60)*60;
+    const limit=await env.DB.prepare('INSERT INTO planner_write_limits (user_id, window_start, attempts) VALUES (?, ?, 1) ON CONFLICT(user_id) DO UPDATE SET attempts = CASE WHEN window_start = excluded.window_start THEN attempts + 1 ELSE 1 END, window_start = excluded.window_start RETURNING attempts').bind(userId,windowStart).first();
+    if(limit.attempts>60)return json({error:'Too many updates'},429,{'Retry-After':String(60-(now-windowStart))});
+    let raw;try{raw=await readBoundedBody(request)}catch(e){if(e instanceof RangeError)return json({error:'Too large'},413);throw e}
     let body;try{body=JSON.parse(raw)}catch{return json({error:'Invalid JSON'},400)}
-    if(!validateState(body.data)||!Number.isInteger(body.revision)||body.revision<0)return json({error:'Invalid plan'},400);
-    const document=JSON.stringify(body.data),next=body.revision+1,stamp=new Date().toISOString();
+    if(!body||typeof body!=='object')return json({error:'Invalid plan'},400);
+    if(body.accountId!==userId)return json({error:'Session changed'},401);
+    if(!validateState(body.data)||!Number.isSafeInteger(body.revision)||body.revision<0||body.revision>=Number.MAX_SAFE_INTEGER)return json({error:'Invalid plan'},400);
+    const document=JSON.stringify(normalizeState(body.data)),next=body.revision+1,stamp=new Date().toISOString();
     const result=body.revision===0?
      await env.DB.prepare('INSERT INTO planner_states (user_id, document, revision, updated_at) VALUES (?, ?, 1, ?) ON CONFLICT(user_id) DO NOTHING').bind(userId,document,stamp).run():
      await env.DB.prepare('UPDATE planner_states SET document = ?, revision = ?, updated_at = ? WHERE user_id = ? AND revision = ?').bind(document,next,stamp,userId,body.revision).run();

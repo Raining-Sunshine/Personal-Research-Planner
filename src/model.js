@@ -26,13 +26,18 @@ export function seed(today=dayKey()){
  ]};
 }
 export function validateState(data){
- if(!data||!Array.isArray(data.projects)||!Array.isArray(data.items)||data.projects.length>250||data.items.length>5000) return false;
+ const record=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
+ if(!record(data)||typeof data.demo!=='boolean'||!Array.isArray(data.projects)||!Array.isArray(data.items)||data.projects.length>250||data.items.length>5000) return false;
  const date=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!isNaN(parseDay(s))&&dayKey(parseDay(s))===s;
- const color=s=>!s||/^#[\da-f]{6}$/i.test(s);
+ const color=s=>typeof s==='string'&&(s===''||/^#[\da-f]{6}$/i.test(s));
  const title=s=>typeof s==='string'&&s.trim().length>0&&s.length<=180;
+ const id=s=>typeof s==='string'&&/^[a-z\d_-]{1,100}$/i.test(s);
  const ids=new Set();
- for(const p of data.projects){if(!p.id||ids.has(p.id)||!title(p.title)||!date(p.start)||!date(p.end)||p.end<p.start||!color(p.color)||!color(p.flagColor))return false;ids.add(p.id);}
+ for(const p of data.projects){if(!record(p)||!id(p.id)||ids.has(p.id)||!title(p.title)||typeof p.subtitle!=='string'||p.subtitle.length>300||!date(p.start)||!date(p.end)||p.end<p.start||!color(p.color)||!color(p.flagColor))return false;ids.add(p.id);}
  const itemIds=new Set();
- for(const i of data.items){if(!i.id||itemIds.has(i.id)||!title(i.title)||!['task','event','milestone'].includes(i.type)||!date(i.start)||!date(i.end)||i.end<i.start||!color(i.color)||typeof i.note!=='string'||i.note.length>20000||(i.projectId&&!ids.has(i.projectId))||(!i.projectId&&i.type!=='event')||(i.time&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(i.time)))return false;itemIds.add(i.id);}
+ for(const i of data.items){if(!record(i)||!id(i.id)||itemIds.has(i.id)||!title(i.title)||!['task','event','milestone'].includes(i.type)||!date(i.start)||!date(i.end)||i.end<i.start||(i.type==='milestone'&&i.start!==i.end)||!color(i.color)||typeof i.done!=='boolean'||typeof i.note!=='string'||i.note.length>20000||(i.projectId!==null&&(!id(i.projectId)||!ids.has(i.projectId)))||(i.projectId===null&&i.type!=='event')||(i.time!==undefined&&(typeof i.time!=='string'||(i.time!==''&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(i.time)))))return false;itemIds.add(i.id);}
  return true;
+}
+export function normalizeState(data){
+ return {demo:data.demo,projects:data.projects.map(p=>({id:p.id,title:p.title,subtitle:p.subtitle,start:p.start,end:p.end,color:p.color,flagColor:p.flagColor})),items:data.items.map(i=>({id:i.id,projectId:i.projectId,type:i.type,title:i.title,start:i.start,end:i.end,time:i.time||'',note:i.note,color:i.color,done:i.done}))};
 }
