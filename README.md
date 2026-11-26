@@ -2,9 +2,13 @@
 
 个人项目规划 Web App：在同一处管理项目、任务、事件与里程碑，并通过日历和甘特图查看安排。支持中英文、手机主屏幕安装和仅本人可访问的云端保存。
 
-[打开私有站点](https://daymark-planner-20261126.diotimachang.chatgpt.site)
+# License
 
-> 此仓库是完整源码备份。访问线上站点需要获得 Sites 访问权限；知道网址或拥有源码不等于能读取线上计划。
+Copyright (c) 2026 Yuyang Zhang
+
+This project is licensed under the [Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/).
+
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 
 ## 界面预览
 
