@@ -19,7 +19,6 @@ export function useEditGesture(){
  },[]);
  return activate=>({
   'data-edit-gesture':true,
-  'aria-describedby':'edit-gesture-hint',
   onPointerDown:e=>ref.current.start(e,activate),
   onPointerLeave:()=>ref.current.cancel(),
   onContextMenu:e=>{if(window.matchMedia('(any-pointer: coarse)').matches)e.preventDefault()},
