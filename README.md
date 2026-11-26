@@ -244,3 +244,9 @@ GitHub 保存应用源码、锁文件、构建脚本、测试、数据库 schema
 完整注册步骤、回调地址、环境变量、权限与时区限制请见 **[Outlook 配置与使用](docs/outlook-setup.md)**。Microsoft client secret 和令牌不进入客户端或备份；ICS 订阅链接会包含在私人 JSON 备份中，请妥善保管备份。
 
 新增模块：`src/CalendarImport.jsx`（导入窗口）、`src/calendar-import.js`（ICS/Graph 归一化与来源合并）、`src/recurrence.js`（重复日期计算）、`src/outlook-server.js`（只读授权与订阅代理）。数据库新增迁移保存加密令牌及短期授权 state，已有计划向后兼容。
+
+### 手机防误触编辑
+
+触屏上长按事件、任务或里程碑约 **500 毫秒**进入编辑，按住时显示轮廓反馈。移动超过 10 像素、滚动、松手过早或系统取消手势都会取消待触发的编辑。页面切换、日期选择、筛选、完成勾选和新增按钮仍然轻触操作。电脑鼠标点击和键盘 Enter / Space 编辑保留。
+
+成功长按时尝试发出 20 毫秒轻震；设备和浏览器必须支持 `navigator.vibrate`。iPhone / iOS Safari 通常不支持网页震动 API，此时仍有视觉反馈及长按编辑，不会承诺系统无法提供的触感。手机日历空白格不再通过双击创建事件，请使用新增按钮。
