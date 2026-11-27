@@ -1,83 +1,91 @@
 # Planner
 
-个人项目规划 Web App：在同一处管理项目、任务、事件与里程碑，并通过日历和甘特图查看安排。支持中英文、手机主屏幕安装和仅本人可访问的云端保存。
+English | [简体中文](README.zh-CN.md)
 
-# License
+A personal project planner that brings projects, tasks, events, and milestones together in a calendar and Gantt timeline. Includes English and Chinese interfaces, responsive layouts, installable web app support, and private cloud storage when deployed through ChatGPT Sites.
 
-Copyright (c) 2026 Yuyang Zhang
+## Preview
 
-This project is licensed under the [Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/).
+An empty workspace from the hosted application, with no personal plans. This screenshot illustrates the layout; some labels and controls have changed since it was captured.
 
-[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+![Planner desktop workspace](docs/previews/desktop.jpg)
 
-## 界面预览
+The 86 preset colors below are generated from the same HEX values used by the application. Colors run from red through blue and purple, with neutrals at the end; each family runs from light to dark.
 
-### 桌面工作区
+![Planner preset color palette](docs/previews/palette.svg)
 
-下面是真实站点的空白工作区截图，展示左侧录入栏与右侧月历，不含个人计划内容。
+## Features
 
-![Planner 桌面工作区](docs/previews/desktop.jpg)
+- Projects with date ranges, tasks, milestone deadlines, and events; events can also exist independently.
+- Notes with clickable HTTP/HTTPS links, 86 preset colors, custom HEX colors, and configurable milestone flags. Text stays black.
+- Day, week, month, and year calendars, with **Sunday first and Saturday last**; a Gantt view for project ranges, tasks, and milestones.
+- Weekly events with multiple weekdays, monthly events, repeat intervals, and optional end dates.
+- In-app ICS file imports, Outlook published calendar subscriptions, and optional Microsoft account authorization for accessible calendars, including supported shared calendars.
+- Imports can appear **only in the calendar**, or become **events in a chosen project**.
+- Account-isolated storage, automatic saving, conflict detection, JSON backup/restore, and phone home-screen installation.
 
-### 86 色预设
+## Use Planner
 
-下图直接由应用使用的 HEX 数据生成。色系从红、橙、黄到绿、青、蓝、紫排列，中性色单独放在最后；每组按感知亮度从浅到深排列。
+1. Open your deployed site and sign in with a ChatGPT account that has access. Sites handles authentication; Planner does not store passwords.
+2. Create a project, then use the **+** next to its name to add a task, event, or milestone.
+3. Edit an item with a mouse click on desktop or a **half-second hold** on touchscreens. Switching views, filtering, marking completion, and adding items remain single-tap actions.
+4. Choose a calendar view or the project timeline. The next-milestone cards retain overdue deadlines until completed.
+5. Changes save automatically. Wait for **Saved to cloud** before closing the page.
 
-![Planner 完整预设色板](docs/previews/palette.svg)
+The initial sample workspace is labeled as a demo. Use **Start my workspace** and confirm to clear its sample records.
 
-## 开始使用应用
+### Layout and date navigation
 
-1. 打开上面的站点，用拥有访问权限的 **ChatGPT 账号**登录。Sites 负责登录验证，应用不另外保存密码。
-2. 点击右上角“新建项目”，填写名称、起止日期，以及主题色和里程碑旗帜颜色。
-3. 点击左侧项目名称右边的 **＋**，选择任务、事件或里程碑。
-4. 点击任一事项即可编辑标题、日期、备注和颜色。备注中的 HTTP / HTTPS URL 会成为可点击链接。
-5. 使用日历的日、周、月、年视图，或切换到“项目时间线”查看甘特图。
-6. 添加或修改后自动保存。顶部出现“已保存到云端”表示该次修改已成功写入。
+| Layout | Behavior |
+| --- | --- |
+| Phone, up to 860 px | Bottom navigation switches between overview, calendar, and Gantt |
+| Desktop | Project sidebar on the left; schedule/timeline tabs on the right |
+| Wide screen, at least 1800 px | Calendar and timeline appear together |
 
-首次进入时可能显示带有“示例工作区”标签的示例内容。点击“开始我的计划”并确认，即可清空示例。只有被标记为示例的数据才会显示此入口。
+On desktop, clicking a month/week date opens its daily agenda; clicking a year-view date opens its month. On touchscreens:
 
-### 项目与事项
+- **Month:** tap once to select a date, then tap the same date again to open its agenda.
+- **Week:** tap a date heading once to select it, then again to open its agenda.
+- **Year:** tap a date once to select it, then again to open its month with that date selected.
 
-| 类型 | 用途 | 日期和状态 |
-| --- | --- | --- |
-| 项目 | 汇总一个课题或目标 | 有独立的开始、结束日期；甘特图显示项目周期 |
-| 任务 | 一段时间内要完成的工作 | 支持跨日；可勾选完成 |
-| 里程碑 | 项目中的重要截止点 | 单日；用项目旗帜颜色显示；可标记完成 |
-| 事件 | 会议、预约或其他日程 | 支持日期范围和可选时间；可以属于项目，也可以独立存在 |
+There is no time limit between the two taps. Selecting a different date starts again. Switching day/week/month/year follows the selected date; week/year views scroll the selection into view. Use **+** to create an event; tapping a date does not create one.
 
-项目周期由项目设置决定，不会自动因某个任务超出日期而改变。日期按设备本地日历日期处理，事件时间是本地钟表时间，不自动换算时区。
+Touch editing cancels when the finger moves or the page scrolls. A successful hold requests a short vibration where supported; iPhone/iOS Safari generally does not support the web vibration API. Visual feedback remains available.
 
-### 布局与筛选
+### Items, colors, and time
 
-- **手机，宽度不超过 860 px：** 底部切换“总览 / 日历 / 甘特图”。
-- **普通桌面：** 左侧固定项目录入与列表，右侧用 Tab 切换日程和项目时间线。
-- **超宽屏，宽度至少 1800 px：** 同时展示日历和甘特图。
-- 点击项目名称筛选该项目；“全部项目”恢复全部显示。
-- 搜索框按项目名称、事项标题和备注筛选。
-- 勾选列表上方的完成筛选框，可以显示已完成事项。
-- 顶部里程碑卡片显示各项目最近一个未完成里程碑；逾期的里程碑会保留提醒。
+Projects have their own date ranges; tasks outside those ranges do not automatically extend the project. Milestones are single-day deadlines. Events support date ranges and an optional local time. Dates use the device’s local calendar; manually entered times are wall-clock times, not timezone-aware appointments.
 
-### 选色
+Use the color picker’s preset library or a six-digit HEX value such as `#92A8D1`. Project colors and milestone flags share the same palette. Original swatch transcription and sorting live in [src/palette.js](src/palette.js). Changing the preset palette does not rewrite existing records.
 
-打开编辑表单中的“预设颜色”，点击圆点即可选色。当前选色有外圈和勾选标记，鼠标悬停可查看 HEX；也可直接输入自定义六位 HEX，例如 `#92A8D1`。
+### Calendar imports and recurring events
 
-五张原始色卡包含 89 个色号记录，去重后为 **86 色**。`#737373`、`#8E7986`、`#DDB02E` 各重复一次。原始分图转录保存在 [src/palette.js](src/palette.js)，可追溯和修改。
+Open **Import calendars**, choose a source and date range, preview the entries, then confirm:
 
-项目主题、任务、事件、里程碑以及项目旗帜使用同一套预设。已有记录的颜色不会因预设变更而重写。正文仍使用黑色；甘特任务条使用半透明底色，保证深色主题上的文字可读。
+| Source | Setup and refresh |
+| --- | --- |
+| ICS file | Upload an `.ics` file up to 2 MB; choose the file again to refresh |
+| Outlook published ICS/webcal URL | No Microsoft app registration required; refresh manually from the source list |
+| Outlook account | Requires a Microsoft app registration and server environment variables; select a calendar exposed to your account through Microsoft Graph |
 
-### 手机安装
+Imports are read-only snapshots, with up to 366 days and 2,000 occurrences per import, and 5,000 items per plan. Refresh replaces that source’s imported events without duplicating them or changing other sources. Changing its date range removes that source’s old events outside the new range. There is **no background automatic synchronization** and no write-back to Outlook.
 
-- iPhone：在 Safari 分享菜单中选择“添加到主屏幕”。
-- Android：在支持的浏览器菜单中选择“安装应用”或“添加到主屏幕”。
+Calendar-only imports stay out of the project sidebar and Gantt chart. Project imports appear as events in that project. Edit imported events in their source calendar, then refresh. Removing a source also removes its imported events after confirmation.
 
-这是可安装的 Web App，不需要应用商店安装包。云端读取和保存需要联网；Service Worker 不缓存私人计划，不提供离线写入队列。
+Native events support weekly repeats on selected weekdays or monthly repeats, at intervals of 1–12 weeks/months. Monthly repeats use the starting day of the month and skip months without that date. Editing, completing, or deleting applies to the entire series; single-occurrence overrides are not currently supported.
 
-## 在本地运行源码
+See the [Microsoft registration and Outlook setup guide (Chinese)](docs/outlook-setup.md) for the callback, permission, and environment-variable details. Microsoft authorization cannot work until those settings are configured. ICS imports do not depend on them. Imported timed events are converted to the importing device’s timezone and saved as local wall-clock values; refresh after changing timezones to convert them again. Unknown ICS timezones are rejected rather than guessed.
 
-### 环境要求
+### Install on a phone
 
-- **Node.js 24 或更新版本**，测试使用内置 `node:sqlite`。
-- npm 与 Git。
-- 浏览器。
+- **iPhone:** Safari → Share → Add to Home Screen.
+- **Android:** browser menu → Install app or Add to Home Screen.
+
+This is an installable web app, not an app-store package. Cloud access needs a network connection. The service worker does not cache private plans or queue offline writes.
+
+## Run locally
+
+Requirements: **Node.js 24+**, npm, Git, and a browser. Tests use Node’s built-in `node:sqlite`.
 
 ```bash
 git clone https://github.com/Raining-Sunshine/Personal-Research-Planner.git
@@ -86,173 +94,97 @@ npm ci
 npm run dev
 ```
 
-打开终端输出的本地 URL，通常为 `http://localhost:5173`。私有仓库克隆需要对应的 GitHub 权限。
+Open the URL printed by Vite, usually `http://localhost:5173`.
 
-**本地开发使用独立的预览模式：** Vite 的 `/api/state` 中间件返回预览标记，数据保存在当前浏览器的 `localStorage`。它不访问生产数据库，也不模拟真实登录。顶部会显示“本地预览”。清除浏览器数据会删除本地预览记录。
+Local development is a separate **preview mode**: the Vite middleware marks `/api/state` as a preview, and plans are stored in that browser’s `localStorage`. It does not access production records, provide real authentication, or synchronize between devices. Clearing browser storage removes preview data. Hosted Outlook and subscription proxy APIs are not provided by this local preview; ICS file import works locally.
 
-在托管的 Codex Cloud 环境中，使用该环境提供的预览守护进程，不另起服务：
-
-```bash
-sites-preview start /workspace/sites/daymark
-```
-
-如果仓库位于其他路径，请替换为实际绝对路径。
-
-### 常用命令
-
-| 命令 | 作用 |
+| Command | Purpose |
 | --- | --- |
-| `npm ci` | 按锁文件安装依赖 |
-| `npm run dev` | 启动本地界面预览 |
-| `npm test` | 执行日期逻辑和 API 防护测试 |
-| `npm run build` | 构建浏览器资源与可部署 Worker |
-| `npm run db:generate` | 数据库 schema 修改后生成新迁移 |
-| `npm run docs:previews` | 根据真实预设数据重新生成 README 色板图 |
+| `npm ci` | Install locked dependencies |
+| `npm run dev` | Start the browser-local development preview |
+| `npm test` | Run model, navigation, import, and API security tests |
+| `npm run build` | Build browser assets and the deployable Worker |
+| `npm run db:generate` | Generate a new database migration after schema changes |
+| `npm run docs:previews` | Regenerate the palette illustration from source colors |
 
-## 仓库结构
+## Deploy with ChatGPT Sites
+
+1. In a ChatGPT/Codex session with Sites available, provide this repository and ask: **“Deploy Planner with D1 storage and keep the site owner-private.”**
+2. For an existing site, retain its project ID. For your own independent copy, let Sites create a new site and replace the project ID in `.openai/hosting.json`; do not reuse the original author’s binding. The publishing workflow synchronizes source, builds, applies migrations, and publishes.
+3. Open the returned URL and sign in with an authorized account. For a custom domain, register it with Sites first and add the DNS records Sites returns.
+
+No VPS or manually opened server ports are needed for this route. Pushing GitHub alone does **not** update Sites; publish changes through Sites. Outlook authorization is optional and needs separate configuration.
+
+## Server ports, custom domains, and DNS
+
+See the **[hosting and DNS guide](docs/hosting.md)** ([中文](docs/hosting.zh-CN.md)) for:
+
+- Sites CNAME/TXT records and when **not** to add A/AAAA records.
+- VPS A/AAAA records, cloud security groups, host firewall rules, reverse proxying, and HTTPS.
+- A private SSH-tunnel preview and an optional password-protected domain preview.
+- What must change before running the full app on your own server.
+
+**The current production backend is a Cloudflare Worker using Sites identity and D1.** It is not a standalone Node HTTP server. `node dist/server/index.js` or uploading only `dist/client/` is not a complete production deployment. The VPS examples in the guide run a browser-local development preview; full authenticated cloud storage requires a backend/authentication adaptation.
+
+## Storage, privacy, and backups
+
+The original hosted site is owner-private. Your deployment needs its own access policy. Every production data request requires a user ID verified by the trusted Sites gateway; do not trust externally supplied `oai-authenticated-user-id` headers on another host.
+
+- Each user has an isolated plan document and revision number in D1.
+- Idle clients check for updates every 30 seconds and on focus. An outdated write returns a conflict instead of overwriting newer data.
+- Writes require same-origin JSON requests, valid data, and the current account. Plan writes are limited to 60 per minute per user and 2 MB per request.
+- Private API responses use `no-store`. Microsoft tokens are encrypted server-side and never sent to the browser or included in plan exports.
+
+Use **Settings → Export backup** to save `planner-YYYY-MM-DD.json`. Importing a backup **replaces the current plan**, including its projects and items; export the current data first and wait for successful cloud saving afterward.
+
+GitHub backs up source and migrations, **not your plan data**. Do not commit exported plans, environment secrets, or tokens. ICS subscription URLs can grant calendar access and are included in private JSON backups: keep those files private.
+
+## Repository layout
 
 ```text
 src/
-  main.jsx                 页面、表单、三种视图与自动保存队列
-  style.css                桌面、超宽屏和手机样式
-  i18n.js                  中英文文案
-  model.js                 日期逻辑、示例数据、严格校验与字段规范化
-  palette.js               原始 HEX、去重、色系和亮度排序
-  server.js                Worker 请求处理、身份检查和 D1 存储
-public/
-  manifest.webmanifest     主屏幕应用配置
-  icon.svg                 应用图标
-  sw.js                    不缓存私人数据的 Service Worker
-db/schema.ts               D1 表结构
-drizzle/                   SQL 迁移和 Drizzle 元数据
-scripts/
-  build-worker.mjs         打包浏览器资源到 Worker
-  generate-previews.mjs    生成文档色板图
-tests/                     模型与 API 安全行为测试
-docs/previews/             README 预览图片
-.openai/hosting.json        Sites 项目 ID 与数据库绑定
-vite.config.js             本地开发配置与预览 API
+  main.jsx                 UI, forms, views, and serialized save queue
+  CalendarImport.jsx       Calendar connection/import dialog
+  calendar-import.js       ICS parsing, Graph conversion, source reconciliation
+  calendar-navigation.js   Date selection and activation rules
+  edit-gesture.js           Touch editing gesture controller
+  useEditGesture.js         React gesture bindings
+  recurrence.js            Native recurring-event date calculations
+  model.js                 Date helpers, sample data, validation, normalization
+  server.js                Worker assets, identity checks, versioned D1 storage
+  outlook-server.js        Read-only Microsoft OAuth and bounded ICS proxy
+  i18n.js / style.css       Translations and responsive styles
+  palette.js               Preset HEX values and ordering
+public/                    Manifest, icon, and service worker
+db/schema.ts               D1 schema
+drizzle/                   Append-only SQL migrations and metadata
+scripts/                   Worker build and palette preview generator
+tests/                     Model, interaction, calendar, and security tests
+docs/                      Hosting and Outlook guides, preview images
+.openai/hosting.json        Sites project identity and DB binding
 ```
 
-关键代码已添加说明，重点解释为什么需要请求序号、revision 条件写入、可信身份头和流式大小限制。
+The build produces `dist/client/`, `dist/server/index.js`, and copies of hosting metadata/migrations. Change `db/schema.ts`, run `npm run db:generate`, inspect the generated SQL, then test, build, and publish. Do not rewrite applied migrations or put personal/demo records into migrations.
 
-## 登录、保存与基础防护
+## Troubleshooting
 
-```mermaid
-flowchart LR
-  A[电脑或手机] --> B[Sites 登录及仅本人访问策略]
-  B --> C[Planner Worker]
-  C --> D[按账号隔离的 D1 数据]
-```
-
-- **访问权限：** 当前 Sites 站点仅允许拥有者访问。不要为了调试而改成公开访问。
-- **用户身份：** 每次读写都要求 Sites 验证并注入的用户 ID；前端传来的 `accountId` 只用于检查会话变化，不能选择要访问的账号。
-- **云端保存：** 每个账号保存一个计划文档和递增版本号。数据库记录不会进入 Git 仓库。
-- **跨设备同步：** 没有待保存修改时，每 30 秒以及重新聚焦页面时读取云端更新。
-- **并发保护：** 旧版本写入返回 409，保存队列停止，避免覆盖其他设备的新修改。界面提示导出备份并重新读取。
-- **请求检查：** 写入必须来自同源、使用 JSON；不开放跨域写入。
-- **频率与体积：** 按账号每分钟最多 60 次写请求；正文按字节流限制为 2 MB；拒绝无效日期、颜色、字段类型和引用。
-- **隐私缓存：** 数据接口使用 `no-store`；Service Worker 不缓存计划。
-- **退出登录：** 在“账号与隐私”中退出。有未保存修改时先完成保存，避免丢失工作。
-
-身份头仅可在可信 Sites 入口后使用。如果迁移到其他托管平台，必须接入新的可信身份验证，不能直接信任外部请求中的同名头。
-
-## 构建和部署到 Sites
-
-此仓库的 `.openai/hosting.json` 已绑定现有 Planner 站点，逻辑 D1 绑定名是 `DB`。更新现有站点时保留项目 ID；创建另一个独立站点时应先注册新 Site，再使用它返回的新 ID。
-
-```bash
-npm test
-npm run build
-```
-
-构建结果：
-
-```text
-dist/client/          HTML、CSS、JS 和 PWA 文件
-dist/server/index.js  default.fetch Worker，内嵌客户端资源
-dist/.openai/         构建时复制的托管配置
-dist/drizzle/         构建时复制的数据库迁移
-```
-
-**推荐通过 Sites 的发布工作流部署**：同步源码到对应 Site 的源码仓库，构建并打包该提交，再保存版本并执行私有发布。GitHub 备份仓库的推送本身不会自动更新 Sites。
-
-需要手工检查归档时，可在项目根目录执行：
-
-```bash
-tar -czf /tmp/planner-deploy.tar.gz \
-  .openai/hosting.json dist/server dist/client drizzle
-```
-
-归档根目录必须保留 `dist/server/index.js` 路径；不要只把 `dist/` 里面的内容放到归档根目录。代码是 Worker 模块，不能当作普通 Node HTTP 服务直接启动。生产运行时需要 Sites 提供认证入口和 `DB` 绑定。
-
-### 数据库修改
-
-1. 修改 `db/schema.ts`。
-2. 运行 `npm run db:generate`。
-3. 检查生成的 SQL 仅包含需要的 schema 变化。
-4. 提交 SQL、快照与 journal，运行测试和构建，再通过 Sites 发布。
-
-已应用的迁移不可重写。追加新迁移，不在请求处理代码中建表，也不在迁移里写入演示计划。
-
-## 备份和恢复
-
-### 源码备份
-
-GitHub 保存应用源码、锁文件、构建脚本、测试、数据库 schema / 迁移、PWA 文件、预览图片和托管配置。提交历史一并保留。
-
-`node_modules/`、构建产物、开发缓存、凭据和真实计划记录不属于源码备份。`.gitignore` 已排除本地工作目录、环境文件及运行时缓存。不要把令牌、密码或导出的私人计划提交进仓库。
-
-### 计划数据备份
-
-在应用设置中点击“导出备份”，下载 `planner-YYYY-MM-DD.json`。在另一设备或需要恢复时，使用“导入备份”并确认。
-
-导入会**替换当前账号的全部项目和事项**，建议先导出当前数据。恢复后的数据仍需等待顶部显示保存成功。GitHub 源码备份不能代替这份计划数据备份。
-
-## 常见问题
-
-| 情况 | 处理方式 |
+| Symptom | What to check |
 | --- | --- |
-| 无法打开私有站点 | 用拥有访问权限的 ChatGPT 账号登录；链接本身不授予权限 |
-| 显示“本地预览” | 当前使用浏览器本地数据，不会同步到正式站点 |
-| 显示保存失败 | 保持页面打开，恢复网络后重试；可先导出备份 |
-| 提示其他设备已有更新 | 导出当前修改，再刷新读取云端；不要反复强行覆盖 |
-| 操作过于频繁 / 429 | 等待一分钟后重试，当前修改仍留在页面中 |
-| 登录已失效 / 401 | 先备份未保存修改，再重新登录 |
-| 新增 schema 后数据库失败 | 检查最新部署及迁移结果；不要重写已应用迁移 |
+| Private site cannot be opened | Sign in with an account allowed by that site; a link does not grant access |
+| “Local preview” is displayed | Data belongs to this browser and does not sync to production |
+| Save failed | Keep the page open, restore connectivity, retry, or export a backup |
+| Version conflict | Export unsaved changes, then reload the latest cloud data |
+| 401 / expired login | Back up unsaved work, then sign in again |
+| 429 / too many updates | Wait one minute before retrying |
+| Domain shows 404 | Check domain registration, verification, deployment, and provider routing—not only DNS |
+| VPS shows 502 | Check that the local preview process is listening at the proxy’s configured address |
 
-## 预览图维护
+The existing desktop screenshot uses an empty workspace. The palette SVG is generated data, not a UI screenshot. Use empty or sample records for future screenshots and exclude account details and credentials.
 
-`docs/previews/desktop.jpg` 是真实私有站点的空白工作区截图，未包含个人计划。`docs/previews/palette.svg` 是由实际色板数据生成的静态图，不冒充界面截图。
+## License
 
-修改色号后运行 `npm run docs:previews` 并提交更新的 SVG。补充界面截图时使用空白或示例工作区，避免带入账号邮箱、访问凭据或真实事项。
+Copyright (c) 2026 Yuyang Zhang
 
-## 日历导入、Outlook 与重复事件
+This project is licensed under the [Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/). See [LICENSE](LICENSE).
 
-在网页的日程/项目切换区域点击 **导入日历**。这是应用内功能，既不需要在聊天里提供日历，也不会把日历写进公开源码。
-
-- **ICS 文件**：上传 `.ics`，选择日期范围与导入目标，先预览再确认。
-- **订阅链接**：粘贴 Outlook 发布的 ICS / webcal 链接。后续在来源列表点击「刷新 / 配置」，预览并确认更新。
-- **Outlook 登录**：配置 Microsoft 应用后，连接账号并选择 Graph 可见的日历，包括账户有权访问的共享日历。未配置时网页会显示配置说明，不会假装已连接。
-- **仅日历**：导入事件出现在日/周/月/年日程，不进入左侧独立事件清单、项目或甘特图。
-- **指定项目**：导入为该项目下的 Event，在项目列表和日历显示。甘特图仍聚焦项目周期、任务和里程碑。
-
-导入是单向快照，最多读取 366 天 / 2,000 次事件；不会修改 Outlook。刷新按来源替换、去重，调整日期范围也会移除该来源范围外的旧事件。来源没有后台自动同步，文件刷新需要重新上传。删除来源会一并删除其导入事件，界面会要求确认。导入记录只读，请在来源修改后刷新。
-
-创建或编辑手动 Event 时，可选择 **每周多选周几** 或 **每月**，设置间隔和可选截止日期。每月按起始日期的几号重复，不存在的日期跳过；编辑、完成、删除作用于整个系列。任务和里程碑不应用重复规则。
-
-完整注册步骤、回调地址、环境变量、权限与时区限制请见 **[Outlook 配置与使用](docs/outlook-setup.md)**。Microsoft client secret 和令牌不进入客户端或备份；ICS 订阅链接会包含在私人 JSON 备份中，请妥善保管备份。
-
-新增模块：`src/CalendarImport.jsx`（导入窗口）、`src/calendar-import.js`（ICS/Graph 归一化与来源合并）、`src/recurrence.js`（重复日期计算）、`src/outlook-server.js`（只读授权与订阅代理）。数据库新增迁移保存加密令牌及短期授权 state，已有计划向后兼容。
-
-### 手机防误触编辑
-
-触屏上长按事件、任务或里程碑约 **500 毫秒**进入编辑，按住时显示轮廓反馈。移动超过 10 像素、滚动、松手过早或系统取消手势都会取消待触发的编辑。页面切换、日期选择、筛选、完成勾选和新增按钮仍然轻触操作。电脑鼠标点击和键盘 Enter / Space 编辑保留。
-
-成功长按时尝试发出 20 毫秒轻震；设备和浏览器必须支持 `navigator.vibrate`。iPhone / iOS Safari 通常不支持网页震动 API，此时仍有视觉反馈及长按编辑，不会承诺系统无法提供的触感。日历空白格不再通过双击创建事件，请使用新增按钮。
-
-### 日期选择与视图切换
-
-月历中，电脑鼠标单击日期直接进入当天日程；手机轻触一次选中日期，再触同一日期进入当天日程（不限制两次间隔）。日期按钮与空白格共用一次点击处理，避免一次轻触误算成两次。新增事项使用 `+` 按钮，日期双击不再创建事件。
-
-手机周视图第一次点日期标题选中当天，再点同一天进入当天日程；年视图第一次点具体日期选中当天，再点同一天进入该月月历并保留日期选中状态。两次点击不限制间隔，换日期则重新选中；电脑仍单击打开。随后切换日/周/月/年视图，会打开该日期所在的位置，并在周、年视图中将选中日期滚动到可见区域。年视图的月份标题可打开该月。事件编辑依然使用原有的手机长按操作。
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
